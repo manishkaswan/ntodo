@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List</title>
+    <style>
+        #todo-list {
+            list-style: none;
+            padding: 0;
+        }
+        .todo-item {
+            margin-bottom: 10px;
+        }
+        .done {
+            text-decoration: line-through;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.3/axios.min.js" integrity="sha512-JWQFV6OCC2o2x8x46YrEeFEQtzoNV++r9im8O8stv91YwHNykzIS2TbvAlFdeH0GVlpnyd79W0ZGmffcRi++Bw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+    <h1>Todo List</h1>
+    <form id="todo-form">
+        <label for="todo-name">Todo Name:</label>
+        <input type="text" id="todo-name" required>
+        <br>
+        <label for="todo-description">Todo Description:</label>
+        <input type="text" id="todo-description" required>
+        <br>
+        <button type="button" onclick="addTodo()">Add Todo</button>
+    </form>
+
+    <h2>Current Todos:</h2>
+    <ul id="todo-list"></ul>
+
+    <h2>Completed Todos:</h2>
+    <ul id="completed-list"></ul>
+
+    <script>
+        const apiUrl = 'https://crudcrud.com/api/a97d55765dfc404792005f87fa39ecd5/mtodo';
+
+        async function addTodo() {
+            const name = document.getElementById('todo-name').value;
+            const description = document.getElementById('todo-description').value;
+
+            if (!name || !description) {
+                alert('Please enter both todo name and description.');
+                return;
+            }
+
+            try {
+                const response = await axios.post(apiUrl, { name, description });
+                displayTodo(response.data);
+            } catch (error) {
+                alert('Failed to add todo.');
+                console.error(error);
+            }
+        }
+
+        async function deleteTodo(_id) {
+            try {
+                await axios.delete(`${apiUrl}/${_id}`);
+                document.getElementById(`todo-${_id}`).remove();
+            } catch (error) {
+                alert('Failed to delete todo.');
+                console.error(error);
+            }
+        }
+
+        async function markAsDone(_id) {
+            try {
+                await axios.put(`${apiUrl}/${_id}`, { done: true });
+                const todoElement = document.getElementById(`todo-${_id}`);
+                const todoData = JSON.parse(todoElement.getAttribute('data-todo'));
+                displayCompleted({ _id, ...todoData });
+                todoElement.remove();
+            } catch (error) {
+                alert('Failed to mark todo as done.');
+                console.error(error);
+            }
+        }
+
+        function displayTodo(todo) {
+            const todoList = document.getElementById('todo-list');
+            const li = document.createElement('li');
+            li.id = `todo-${todo._id}`;
+            li.className = 'todo-item';
+            li.setAttribute('data-todo', JSON.stringify(todo));
+            li.innerHTML = `
+                ${todo.name ? todo.name + ' - ' : ''}${todo.description ? todo.description : ''}
+                <button onclick="deleteTodo('${todo._id}')">Delete</button>
+                <button onclick="markAsDone('${todo._id}')">Done</button>
+            `;
+            todoList.appendChild(li);
+        }
+
+        function displayCompleted(todo) {
+            const completedList = document.getElementById('completed-list');
+            const li = document.createElement('li');
+            li.id = `completed-${todo._id}`;
+            li.className = 'todo-item done';
+            li.innerHTML = `
+                ${todo.name ? todo.name + ' - ' : ''}${todo.description ? todo.description : ''}
+            `;
+            completedList.appendChild(li);
+        }
+
+        async function fetchTodos() {
+            try {
+                const response = await axios.get(apiUrl);
+                response.data.forEach(todo => {
+                    if (todo.done) {
+                        displayCompleted(todo);
+                    } else {
+                        displayTodo(todo);
+                    }
+                });
+            } catch (error) {
+                alert('Failed to fetch todos.');
+                console.error(error);
+            }
+        }
+
+        fetchTodos();
+    </script>
+</body>
+</html>
